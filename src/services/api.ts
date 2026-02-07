@@ -66,7 +66,19 @@ export const productService = {
         return [];
       }
 
-      return products.map(transformProduct).filter((p: Product) => p.id);
+      const transformedProducts = products.map((p: any) => {
+        const transformed = transformProduct(p);
+        console.log('Transformed product:', {
+          id: transformed.id,
+          title: transformed.title,
+          variantsCount: transformed.variants.length,
+          firstVariant: transformed.variants[0],
+        });
+        return transformed;
+      }).filter((p: Product) => p.id);
+      
+      console.log('Total transformed products:', transformedProducts.length);
+      return transformedProducts;
     } catch (error) {
       console.error('API fetch error:', error);
       return [];

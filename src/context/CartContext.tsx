@@ -27,31 +27,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const addItem = useCallback(
     (productId: string, productTitle: string, variant: ProductVariant) => {
+      console.log('CartContext.addItem called with:', { productId, productTitle, variantId: variant.id });
       setItems((prevItems) => {
         const existingItem = prevItems.find(
           (item) => item.productId === productId && item.variantId === variant.id
         );
 
+        let newItems;
         if (existingItem) {
-          return prevItems.map((item) =>
+          newItems = prevItems.map((item) =>
             item.productId === productId && item.variantId === variant.id
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
+        } else {
+          newItems = [
+            ...prevItems,
+            {
+              productId,
+              variantId: variant.id,
+              productTitle,
+              variantTitle: variant.title,
+              price: variant.price,
+              image: variant.image || { url: '' },
+              quantity: 1,
+            },
+          ];
         }
-
-        return [
-          ...prevItems,
-          {
-            productId,
-            variantId: variant.id,
-            productTitle,
-            variantTitle: variant.title,
-            price: variant.price,
-            image: variant.image || { url: '' },
-            quantity: 1,
-          },
-        ];
+        
+        console.log('Cart updated:', newItems.length, 'items');
+        return newItems;
       });
     },
     []

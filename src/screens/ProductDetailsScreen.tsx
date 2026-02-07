@@ -23,8 +23,20 @@ type Props = NativeStackScreenProps<
 const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
   const { product } = route.params;
   const { addItem } = useCart();
+  
+  // Ensure we have at least one variant
+  const defaultVariant = product.variants && product.variants.length > 0 
+    ? product.variants[0] 
+    : {
+        id: 'default',
+        title: 'Default',
+        price: '0.00',
+        available: true,
+        image: product.image,
+      };
+  
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(
-    product.variants[0]
+    defaultVariant
   );
   const [expandedVariants, setExpandedVariants] = useState(false);
 
@@ -76,8 +88,6 @@ const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
       </TouchableOpacity>
     );
   };
-
-  const defaultVariant = product.variants[0];
 
   return (
     <SafeAreaView style={styles.container}>
