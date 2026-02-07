@@ -48,7 +48,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
             productTitle,
             variantTitle: variant.title,
             price: variant.price,
-            image: variant.image || { src: '' },
+            image: variant.image || { url: '' },
             quantity: 1,
           },
         ];

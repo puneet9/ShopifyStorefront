@@ -4,7 +4,7 @@ export interface ProductVariant {
   price: string;
   available: boolean;
   image?: {
-    src: string;
+    url: string;
   };
 }
 
@@ -13,7 +13,7 @@ export interface Product {
   title: string;
   description: string;
   image: {
-    src: string;
+    url: string;
   };
   variants: ProductVariant[];
 }
@@ -25,7 +25,7 @@ export interface CartItem {
   variantTitle: string;
   price: string;
   image: {
-    src: string;
+    url: string;
   };
   quantity: number;
 }
@@ -33,17 +33,21 @@ export interface CartItem {
 export interface ShopifyProduct {
   id: string;
   title: string;
-  bodyHtml: string;
+  bodyHtml?: string;
+  descriptionHtml?: string;
   images: Array<{
     id: string;
-    src: string;
+    url: string;
   }>;
   variants: Array<{
     id: string;
     title: string;
-    price: string;
-    available: boolean;
-    image_id: string | null;
+    price: string | { amount: string; currencyCode: string };
+    availableForSale: boolean;
+    image?: {
+      id: string;
+      url: string;
+    };
   }>;
 }
 

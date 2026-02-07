@@ -6,9 +6,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { CartItem } from '../types';
 
@@ -52,14 +52,13 @@ const CartScreen: React.FC = () => {
   const renderCartItem = ({ item }: { item: CartItem }) => (
     <View
       style={styles.cartItem}
-      accessibilityRole="listitem"
       accessible={true}
       accessibilityLabel={`${item.productTitle}, ${item.variantTitle}, quantity ${item.quantity}, $${(parseFloat(item.price) * item.quantity).toFixed(2)}`}
     >
       {/* Product Image */}
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: item.image.src }}
+          source={{ uri: item.image.url }}
           style={styles.image}
           accessibilityIgnoresInvertColors
         />
@@ -70,14 +69,13 @@ const CartScreen: React.FC = () => {
         <Text
           style={styles.productName}
           numberOfLines={2}
-          accessibilityRole="header"
         >
           {item.productTitle}
         </Text>
         <Text style={styles.variantName} numberOfLines={1}>
           {item.variantTitle}
         </Text>
-        <Text style={styles.price} accessibilityRole="header">
+        <Text style={styles.price}>
           ${parseFloat(item.price).toFixed(2)}
         </Text>
       </View>

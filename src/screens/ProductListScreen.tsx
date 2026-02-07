@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  SafeAreaView,
   Dimensions,
   AccessibilityInfo,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { productService } from '../services/api';
 import { Product } from '../types';
@@ -71,7 +71,7 @@ const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       >
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: item.image.src }}
+            source={{ uri: item.image.url }}
             style={styles.image}
             accessibilityIgnoresInvertColors
           />
@@ -83,7 +83,7 @@ const ProductListScreen: React.FC<Props> = ({ navigation }) => {
         >
           {item.title}
         </Text>
-        <Text style={styles.price} accessibilityRole="header">
+        <Text style={styles.price}>
           ${price}
         </Text>
       </TouchableOpacity>

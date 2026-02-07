@@ -1,277 +1,82 @@
 import axios from 'axios';
-import { ShopifyProduct, Product, ProductVariant } from '../types';
+import { Product, ProductVariant } from '../types';
 
 const API_URL =
   'https://gist.githubusercontent.com/agorovyi/40dcd166a38b4d1e9156ad66c87111b7/raw/36f1c815dd83ed8189e55e6e6619b5d7c7c4e7d6/testProducts.json';
 
-interface ProductsResponse {
-  products: ShopifyProduct[];
-}
+// Transform Shopify API product to app Product type
+const transformProduct = (shopifyProduct: any): Product => {
+  // Get main image URL
+  const mainImage = shopifyProduct.images?.[0];
+  const imageUrl = mainImage?.url || 'https://via.placeholder.com/500?text=No+Image';
 
-// Mock data for testing when API is unavailable
-const MOCK_PRODUCTS: ShopifyProduct[] = [
-  {
-    id: '1',
-    title: 'Classic T-Shirt',
-    bodyHtml: '<p>Comfortable and durable classic t-shirt made from 100% organic cotton. Perfect for everyday wear.</p>',
-    images: [
-      {
-        id: '1',
-        src: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&h=500&fit=crop',
-      },
-    ],
-    variants: [
-      {
-        id: 'v1',
-        title: 'Small',
-        price: '29.99',
-        available: true,
-        image_id: '1',
-      },
-      {
-        id: 'v2',
-        title: 'Medium',
-        price: '29.99',
-        available: true,
-        image_id: '1',
-      },
-      {
-        id: 'v3',
-        title: 'Large',
-        price: '29.99',
-        available: true,
-        image_id: '1',
-      },
-      {
-        id: 'v4',
-        title: 'XL',
-        price: '29.99',
-        available: false,
-        image_id: '1',
-      },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Denim Jacket',
-    bodyHtml: '<p>Premium denim jacket with timeless style. Features multiple pockets and adjustable cuffs.</p>',
-    images: [
-      {
-        id: '2',
-        src: 'https://images.unsplash.com/photo-1551028719-00167b16ebc5?w=500&h=500&fit=crop',
-      },
-    ],
-    variants: [
-      {
-        id: 'v5',
-        title: 'Small',
-        price: '89.99',
-        available: true,
-        image_id: '2',
-      },
-      {
-        id: 'v6',
-        title: 'Medium',
-        price: '89.99',
-        available: true,
-        image_id: '2',
-      },
-      {
-        id: 'v7',
-        title: 'Large',
-        price: '89.99',
-        available: true,
-        image_id: '2',
-      },
-    ],
-  },
-  {
-    id: '3',
-    title: 'Sneakers',
-    bodyHtml: '<p>Lightweight and comfortable sneakers perfect for running and casual wear.</p>',
-    images: [
-      {
-        id: '3',
-        src: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop',
-      },
-    ],
-    variants: [
-      {
-        id: 'v8',
-        title: 'Size 7',
-        price: '79.99',
-        available: true,
-        image_id: '3',
-      },
-      {
-        id: 'v9',
-        title: 'Size 8',
-        price: '79.99',
-        available: true,
-        image_id: '3',
-      },
-      {
-        id: 'v10',
-        title: 'Size 9',
-        price: '79.99',
-        available: true,
-        image_id: '3',
-      },
-      {
-        id: 'v11',
-        title: 'Size 10',
-        price: '79.99',
-        available: false,
-        image_id: '3',
-      },
-    ],
-  },
-  {
-    id: '4',
-    title: 'Summer Shorts',
-    bodyHtml: '<p>Breathable shorts perfect for summer. Made from quick-dry material.</p>',
-    images: [
-      {
-        id: '4',
-        src: 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=500&h=500&fit=crop',
-      },
-    ],
-    variants: [
-      {
-        id: 'v12',
-        title: 'Small',
-        price: '34.99',
-        available: true,
-        image_id: '4',
-      },
-      {
-        id: 'v13',
-        title: 'Medium',
-        price: '34.99',
-        available: true,
-        image_id: '4',
-      },
-      {
-        id: 'v14',
-        title: 'Large',
-        price: '34.99',
-        available: true,
-        image_id: '4',
-      },
-    ],
-  },
-  {
-    id: '5',
-    title: 'Wool Sweater',
-    bodyHtml: '<p>Cozy wool sweater perfect for fall and winter. Available in multiple colors.</p>',
-    images: [
-      {
-        id: '5',
-        src: 'https://images.unsplash.com/photo-1580318684555-73cf9e9b1fe8?w=500&h=500&fit=crop',
-      },
-    ],
-    variants: [
-      {
-        id: 'v15',
-        title: 'Small',
-        price: '59.99',
-        available: true,
-        image_id: '5',
-      },
-      {
-        id: 'v16',
-        title: 'Medium',
-        price: '59.99',
-        available: true,
-        image_id: '5',
-      },
-      {
-        id: 'v17',
-        title: 'Large',
-        price: '59.99',
-        available: true,
-        image_id: '5',
-      },
-    ],
-  },
-  {
-    id: '6',
-    title: 'Canvas Backpack',
-    bodyHtml: '<p>Durable canvas backpack with multiple compartments. Great for travel and daily use.</p>',
-    images: [
-      {
-        id: '6',
-        src: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop',
-      },
-    ],
-    variants: [
-      {
-        id: 'v18',
-        title: 'Standard',
-        price: '49.99',
-        available: true,
-        image_id: '6',
-      },
-      {
-        id: 'v19',
-        title: 'Large',
-        price: '54.99',
-        available: true,
-        image_id: '6',
-      },
-    ],
-  },
-];
+  // Transform variants
+  const variants: ProductVariant[] = (shopifyProduct.variants || []).map((variant: any) => {
+    // Get variant image or use main image
+    const variantImage = shopifyProduct.images?.find((img: any) => img.id === variant.image?.id);
+    const variantImageUrl = variantImage?.url || imageUrl;
 
-const transformProduct = (shopifyProduct: ShopifyProduct): Product => {
-  const mainImage = shopifyProduct.images[0] || { src: '' };
-
-  const variants: ProductVariant[] = shopifyProduct.variants.map(
-    (variant) => {
-      const variantImage = shopifyProduct.images.find(
-        (img) => img.id === variant.image_id
-      ) || mainImage;
-
-      return {
-        id: variant.id.toString(),
-        title: variant.title,
-        price: variant.price,
-        available: variant.available,
-        image: {
-          src: variantImage.src,
-        },
-      };
+    // Extract price - Shopify API uses price.amount
+    let price = '0.00';
+    if (variant.price) {
+      if (typeof variant.price === 'object') {
+        price = variant.price.amount || '0.00';
+      } else {
+        price = variant.price.toString();
+      }
     }
-  );
+
+    return {
+      id: variant.id,
+      title: variant.title || 'Default',
+      price: price,
+      available: variant.availableForSale !== false,
+      image: {
+        url: variantImageUrl,
+      },
+    };
+  });
+
+  // Clean description - remove HTML tags
+  const rawDescription = shopifyProduct.descriptionHtml || shopifyProduct.description || '';
+  const description = typeof rawDescription === 'string' 
+    ? rawDescription.replace(/<[^>]*>/g, '').trim() 
+    : '';
 
   return {
-    id: shopifyProduct.id.toString(),
-    title: shopifyProduct.title,
-    description: shopifyProduct.bodyHtml,
-    image: mainImage,
-    variants,
+    id: shopifyProduct.id || '',
+    title: shopifyProduct.title || 'Untitled',
+    description: description || 'No description',
+    image: {
+      url: imageUrl,
+    },
+    variants: variants.length > 0 ? variants : [
+      {
+        id: 'default',
+        title: 'Default',
+        price: '0.00',
+        available: true,
+        image: { url: imageUrl },
+      },
+    ],
   };
 };
 
 export const productService = {
   async fetchProducts(): Promise<Product[]> {
     try {
-      const response = await axios.get<ProductsResponse | ShopifyProduct[]>(API_URL);
-      // Handle both array and object responses
-      const products = Array.isArray(response.data) 
-        ? response.data 
-        : response.data.products;
-      
+      const response = await axios.get(API_URL);
+      const products = Array.isArray(response.data) ? response.data : response.data.products || [];
+
       if (!products || products.length === 0) {
-        console.warn('No products found in API response, using mock data');
-        return MOCK_PRODUCTS.map(transformProduct);
+        console.warn('No products in API response');
+        return [];
       }
-      
-      return products.map(transformProduct);
+
+      return products.map(transformProduct).filter((p: Product) => p.id);
     } catch (error) {
-      console.warn('API fetch failed, using mock data:', error);
-      // Fallback to mock data if API is unavailable
-      return MOCK_PRODUCTS.map(transformProduct);
+      console.error('API fetch error:', error);
+      return [];
     }
   },
 };

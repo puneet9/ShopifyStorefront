@@ -6,10 +6,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCart } from '../context/CartContext';
 import { Product, ProductVariant } from '../types';
@@ -76,7 +76,7 @@ const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
         {/* Product Image */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: selectedVariant.image?.src || product.image.src }}
+            source={{ uri: selectedVariant.image?.url || product.image.url }}
             style={styles.image}
             accessibilityIgnoresInvertColors
           />
@@ -86,29 +86,29 @@ const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
         <View style={styles.content}>
           <Text
             style={styles.title}
-            accessibilityRole="header"
-            accessibilityLevel={1}
           >
             {product.title}
           </Text>
 
-          <Text style={styles.price} accessibilityRole="header">
+          <Text style={styles.price}>
             ${selectedVariant.price}
           </Text>
 
           {/* Description */}
-          <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionLabel} accessibilityRole="header">
-              Description
-            </Text>
-            <Text
-              style={styles.description}
-              selectable
-              accessibilityLiveRegion="polite"
-            >
-              {product.description.replace(/<[^>]*>/g, '')}
-            </Text>
-          </View>
+          {product.description && (
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.descriptionLabel}>
+                Description
+              </Text>
+              <Text
+                style={styles.description}
+                selectable
+                accessibilityLiveRegion="polite"
+              >
+                {product.description}
+              </Text>
+            </View>
+          )}
 
           {/* Variant Selection */}
           {product.variants.length > 1 && (

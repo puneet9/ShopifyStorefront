@@ -12,7 +12,7 @@ describe('Cart Operations', () => {
     title: 'Small',
     price: '29.99',
     available: true,
-    image: { src: 'https://example.com/image.jpg' },
+    image: { url: 'https://example.com/image.jpg' },
   };
 
   const mockVariant2: ProductVariant = {
@@ -20,7 +20,7 @@ describe('Cart Operations', () => {
     title: 'Large',
     price: '39.99',
     available: true,
-    image: { src: 'https://example.com/image2.jpg' },
+    image: { url: 'https://example.com/image2.jpg' },
   };
 
   const mockCartItem: CartItem = {
@@ -29,7 +29,7 @@ describe('Cart Operations', () => {
     productTitle: 'Test Product',
     variantTitle: 'Small',
     price: '29.99',
-    image: { src: 'https://example.com/image.jpg' },
+    image: { url: 'https://example.com/image.jpg' },
     quantity: 1,
   };
 

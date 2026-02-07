@@ -37,7 +37,7 @@ export const addItemToCart = (
       productTitle,
       variantTitle: variant.title,
       price: variant.price,
-      image: variant.image || { src: '' },
+      image: variant.image || { url: '' },
       quantity: 1,
     },
   ];
