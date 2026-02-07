@@ -1,97 +1,136 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 🛍️ Shopify Storefront Product Browser
 
-# Getting Started
+A React Native e-commerce application built with TypeScript that allows users to browse products from the Shopify Storefront API, view product details, manage variants, and maintain a shopping cart.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 📋 Features
 
-## Step 1: Start Metro
+### ✅ Core Features Implemented
+- **Product Browsing**: 2-column grid layout for product display
+- **Product Details**: Expandable variant selection with availability indicators
+- **Shopping Cart**: Add/remove items, adjust quantities, view total price
+- **State Management**: React Context for cart operations
+- **Type Safety**: Full TypeScript typing for navigation, state, and components
+- **Networking**: Axios for API calls with error handling
+- **Accessibility**: VoiceOver (iOS) and TalkBack (Android) compatible
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### 🎯 Navigation
+- **Bottom Tab Navigator**: Shop and Cart tabs
+- **Nested Navigation**: Collection tab with Product List and Product Details screens
+- **Type-Safe Routing**: Full TypeScript support for route parameters
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## 🚀 Quick Start
 
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+### Installation
+```bash
+cd /Users/pnine/Code/ProjReactive/ShopifyStorefront
+npm install
 ```
 
-## Step 2: Build and run your app
+### Running the App
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+**iOS:**
+```bash
+npx react-native run-ios
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+**Android:**
+```bash
+npx react-native run-android
 ```
 
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
+### Running Tests
+```bash
+npm test
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## 📁 Project Structure
 
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+```
+src/
+├── navigation/
+│   └── RootNavigator.tsx          # Tab + Stack navigation
+├── screens/
+│   ├── ProductListScreen.tsx      # 2-column product grid
+│   ├── ProductDetailsScreen.tsx   # Product details & variants
+│   └── CartScreen.tsx             # Shopping cart
+├── context/
+│   └── CartContext.tsx            # State management
+├── services/
+│   └── api.ts                     # Shopify API service
+├── types/
+│   └── index.ts                   # TypeScript definitions
+└── App.tsx
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## �� Implementation Highlights
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+### Key Features
+- ✅ 2-column responsive grid layout
+- ✅ Variant selection with availability indicators
+- ✅ Cart management (add, remove, update quantities)
+- ✅ Real-time total price calculation
+- ✅ Type-safe navigation
+- ✅ Full accessibility support (VoiceOver/TalkBack)
+- ✅ Comprehensive Jest tests
 
-## Step 3: Modify your app
+### Technologies
+- **Navigation**: React Navigation (Tab + Stack)
+- **State**: React Context API
+- **Networking**: Axios with error handling
+- **Styling**: React Native StyleSheet
+- **Testing**: Jest with pure utility functions
+- **Accessibility**: WCAG compliance
 
-Now that you have successfully run the app, let's make changes!
+## 🧪 Testing
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+```bash
+npm test -- __tests__/cartOperations.test.ts
+```
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+Tests cover:
+- Price calculations
+- Adding items (new & duplicate)
+- Removing items
+- Updating quantities
+- Edge cases
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## 📚 API Integration
 
-## Congratulations! :tada:
+Fetches from: `https://cdn.shopify.com/s/files/1/0533/2089/files/products.json?v=1613490589`
 
-You've successfully run and modified your React Native App. :partying_face:
+Transforms Shopify response to app types with full error handling.
 
-### Now what?
+## 🎯 Skills Demonstrated
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+- React + TypeScript patterns
+- React Native UI/UX best practices
+- FlatList optimization
+- Navigation architecture
+- API integration
+- State management
+- Accessibility (WCAG)
+- Testing with Jest
+- Code quality & maintainability
 
-# Troubleshooting
+## 🐛 Debugging
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+**Developer Menu:**
+- iOS: `Cmd + D`
+- Android: `Cmd + M` (Mac) or `Ctrl + M` (Windows/Linux)
 
-# Learn More
+## 📦 Dependencies
 
-To learn more about React Native, take a look at the following resources:
+- @react-navigation/native
+- @react-navigation/bottom-tabs
+- @react-navigation/native-stack
+- react-native-screens
+- react-native-safe-area-context
+- axios
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## 📄 License
+
+Provided for evaluation purposes.
+
+---
+
+Built with ❤️ using React Native + TypeScript
