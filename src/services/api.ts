@@ -1,28 +1,22 @@
 import axios from 'axios';
 import { Product, ProductVariant } from '../types';
 
-const API_URL =
-  'https://gist.githubusercontent.com/agorovyi/40dcd166a38b4d1e9156ad66c87111b7/raw/36f1c815dd83ed8189e55e6e6619b5d7c7c4e7d6/testProducts.json';
+const API_URL = 'https://gist.githubusercontent.com/agorovyi/40dcd166a38b4d1e9156ad66c87111b7/raw/36f1c815dd83ed8189e55e6e6619b5d7c7c4e7d6/testProducts.json';
 
-// Transform Shopify API product to app Product type
 const transformProduct = (shopifyProduct: any): Product => {
-  // Get main image URL
   const mainImage = shopifyProduct.images?.[0];
   const imageUrl = mainImage?.url || 'https://via.placeholder.com/500?text=No+Image';
 
-  // Transform variants
   const variants: ProductVariant[] = (shopifyProduct.variants || []).map((variant: any) => {
-    // Get variant image or use main image
     const variantImage = shopifyProduct.images?.find((img: any) => img.id === variant.image?.id);
     const variantImageUrl = variantImage?.url || imageUrl;
 
-    // Extract price - Shopify API uses price.amount
     let price = '0.00';
     if (variant.price) {
-      if (typeof variant.price === 'object') {
-        price = variant.price.amount || '0.00';
-      } else {
-        price = variant.price.toString();
+      if (typeof variant.price === 'object' && variant.price.amount) {
+        price = variant.price.amount;
+      } else if (typeof variant.price === 'string') {
+        price = variant.price;
       }
     }
 
@@ -37,7 +31,6 @@ const transformProduct = (shopifyProduct: any): Product => {
     };
   });
 
-  // Clean description - remove HTML tags
   const rawDescription = shopifyProduct.descriptionHtml || shopifyProduct.description || '';
   const description = typeof rawDescription === 'string' 
     ? rawDescription.replace(/<[^>]*>/g, '').trim() 

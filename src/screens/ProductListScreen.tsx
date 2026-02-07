@@ -38,10 +38,15 @@ const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       setLoading(true);
       setError(null);
       const data = await productService.fetchProducts();
+      console.log('Products loaded:', data.length, 'products');
+      if (data.length === 0) {
+        setError('No products available');
+      }
       setProducts(data);
     } catch (err) {
-      setError('Failed to load products. Please try again.');
-      console.error(err);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to load products: ${errorMsg}`);
+      console.error('Product fetch error:', err);
     } finally {
       setLoading(false);
     }

@@ -29,7 +29,16 @@ const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
   const [expandedVariants, setExpandedVariants] = useState(false);
 
   const handleAddToCart = useCallback(() => {
-    addItem(product.id, product.title, selectedVariant);
+    try {
+      console.log('Adding to cart:', {
+        productId: product.id,
+        productTitle: product.title,
+        variant: selectedVariant,
+      });
+      addItem(product.id, product.title, selectedVariant);
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
   }, [addItem, product.id, product.title, selectedVariant]);
 
   const toggleVariants = useCallback(() => {
