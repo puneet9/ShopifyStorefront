@@ -19,6 +19,6 @@ describe('CartContext - Add to Cart', () => {
     expect(variant.id).toBe('variant-test-1');
     expect(variant.price).toBe('29.99');
     expect(variant.available).toBe(true);
-    expect(variant.image.url).toBe('https://example.com/test.jpg');
+    expect(variant.image?.url).toBe('https://example.com/test.jpg');
   });
 });

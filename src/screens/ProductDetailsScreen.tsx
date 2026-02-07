@@ -8,6 +8,7 @@ import {
   StyleSheet,
   FlatList,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,9 +21,11 @@ type Props = NativeStackScreenProps<
   'ProductDetails'
 >;
 
-const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
+const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
   const { product } = route.params;
   const { addItem } = useCart();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [addedSuccessfully, setAddedSuccessfully] = useState(false);
   
   // Ensure we have at least one variant
   const defaultVariant = product.variants && product.variants.length > 0 
@@ -41,17 +44,52 @@ const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
   const [expandedVariants, setExpandedVariants] = useState(false);
 
   const handleAddToCart = useCallback(() => {
+    if (isAddingToCart) return;
+    
     try {
+      setIsAddingToCart(true);
       console.log('Adding to cart:', {
         productId: product.id,
         productTitle: product.title,
         variant: selectedVariant,
       });
       addItem(product.id, product.title, selectedVariant);
+      
+      // Show success feedback
+      setAddedSuccessfully(true);
+      
+      // Alert user with option to go to cart
+      Alert.alert(
+        'Success!',
+        'Item added to cart. View your cart?',
+        [
+          {
+            text: 'Continue Shopping',
+            onPress: () => {
+              setAddedSuccessfully(false);
+              setIsAddingToCart(false);
+            },
+            style: 'default',
+          },
+          {
+            text: 'Go to Cart',
+            onPress: () => {
+              setAddedSuccessfully(false);
+              setIsAddingToCart(false);
+              // Navigate to cart screen (parent tab navigator)
+              navigation.getParent()?.navigate('Cart' as any);
+            },
+            style: 'default',
+          },
+        ],
+        { cancelable: false }
+      );
     } catch (error) {
       console.error('Error adding to cart:', error);
+      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
+      setIsAddingToCart(false);
     }
-  }, [addItem, product.id, product.title, selectedVariant]);
+  }, [addItem, product.id, product.title, selectedVariant, isAddingToCart, navigation]);
 
   const toggleVariants = useCallback(() => {
     setExpandedVariants(!expandedVariants);
@@ -178,15 +216,23 @@ const ProductDetailsScreen: React.FC<Props> = ({ route }) => {
           style={[
             styles.addToCartButton,
             !selectedVariant.available && styles.addToCartButtonDisabled,
+            isAddingToCart && styles.addToCartButtonLoading,
+            addedSuccessfully && styles.addToCartButtonSuccess,
           ]}
           onPress={handleAddToCart}
-          disabled={!selectedVariant.available}
+          disabled={!selectedVariant.available || isAddingToCart}
           accessibilityRole="button"
           accessibilityLabel={`Add ${product.title} to cart`}
           accessibilityHint="Double tap to add this product to your shopping cart"
         >
           <Text style={styles.addToCartText}>
-            {selectedVariant.available ? 'Add to Cart' : 'Out of Stock'}
+            {addedSuccessfully
+              ? '✓ Added to Cart!'
+              : isAddingToCart
+              ? 'Adding...'
+              : selectedVariant.available
+              ? 'Add to Cart'
+              : 'Out of Stock'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -319,6 +365,13 @@ const styles = StyleSheet.create({
   },
   addToCartButtonDisabled: {
     backgroundColor: '#ccc',
+  },
+  addToCartButtonLoading: {
+    backgroundColor: '#666',
+    opacity: 0.8,
+  },
+  addToCartButtonSuccess: {
+    backgroundColor: '#4CAF50',
   },
   addToCartText: {
     color: '#fff',
