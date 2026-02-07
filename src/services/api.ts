@@ -256,8 +256,18 @@ const transformProduct = (shopifyProduct: ShopifyProduct): Product => {
 export const productService = {
   async fetchProducts(): Promise<Product[]> {
     try {
-      const response = await axios.get<ProductsResponse>(API_URL);
-      return response.data.products.map(transformProduct);
+      const response = await axios.get<ProductsResponse | ShopifyProduct[]>(API_URL);
+      // Handle both array and object responses
+      const products = Array.isArray(response.data) 
+        ? response.data 
+        : response.data.products;
+      
+      if (!products || products.length === 0) {
+        console.warn('No products found in API response, using mock data');
+        return MOCK_PRODUCTS.map(transformProduct);
+      }
+      
+      return products.map(transformProduct);
     } catch (error) {
       console.warn('API fetch failed, using mock data:', error);
       // Fallback to mock data if API is unavailable
