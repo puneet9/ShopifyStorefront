@@ -1,0 +1,60 @@
+{
+  "common": {
+    "shop": "Boutique",
+    "cart": "Panier",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "retry": "Réessayer"
+  },
+  "cart": {
+    "emptyTitle": "Votre panier est vide",
+    "emptySubtitle": "Parcourez les produits pour ajouter des articles",
+    "total": "Total :",
+    "checkout": "Paiement",
+    "clearCart": "Vider le panier",
+    "cartCleared": "Panier vidé",
+    "remove": "Retirer",
+    "alertClearTitle": "Vider le panier",
+    "alertClearMessage": "Êtes-vous sûr de vouloir retirer tous les articles ?",
+    "alertOrderPlacedMessage": "Merci pour votre achat !",
+    "accessibility": {
+      "decreaseQuantity": "Diminuer la quantité pour {{product}}",
+      "increaseQuantity": "Augmenter la quantité pour {{product}}",
+      "quantity": "Quantité",
+      "remove": "Retirer {{product}} du panier",
+      "list": "Articles du panier",
+      "checkoutHint": "Procéder au paiement",
+      "clearCart": "Vider le panier"
+    }
+  },
+  "productDetails": {
+    "title": "Détails du produit",
+    "description": "Description",
+    "selectVariant": "Sélectionner une variante",
+    "defaultVariant": "Par défaut",
+    "imageUnavailable": "Image indisponible",
+    "expandVariants": "Développer les options",
+    "collapseVariants": "Réduire les options",
+    "addToCart": "Ajouter au panier",
+    "addedToCart": "✓ Ajouté !",
+    "adding": "Ajout...",
+    "outOfStock": "Rupture de stock",
+    "goToCart": "Aller au panier",
+    "accessibility": {
+      "addToCart": "Ajouter {{product}} au panier",
+      "addToCartHint": "Appuyez deux fois pour ajouter au panier"
+    }
+  },
+  "productList": {
+    "noProducts": "Aucun produit disponible",
+    "loadError": "Échec du chargement : {{error}}",
+    "unknownError": "Erreur inconnue",
+    "collectionTitle": "Collection",
+    "collectionDescription": "Alliez confort et style avec des matériaux premium.",
+    "accessibility": {
+      "retry": "Réessayer le chargement",
+      "list": "Liste des produits",
+      "itemHint": "Appuyez deux fois pour voir les détails"
+    }
+  }
+}
