@@ -69,6 +69,29 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: 16,
     letterSpacing: 0.3,
   },
+  descriptionSectionSpacer: {
+    height: 12,
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+    paddingLeft: 2,
+  },
+  bulletDot: {
+    fontSize: 14,
+    color: colors.primary,
+    marginRight: 10,
+    marginTop: 2,
+    fontWeight: '700',
+  },
+  bulletText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+    fontWeight: '500',
+  },
   variantsContainer: {
     marginBottom: 24,
     marginTop: 8,

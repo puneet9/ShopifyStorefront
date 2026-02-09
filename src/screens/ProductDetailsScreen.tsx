@@ -16,6 +16,7 @@ import { CollectionStackParamList } from '../types';
 import { getStyles } from '../styles/ProductDetailsScreen.styles';
 import { colors } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import { parseDescription } from '../utils/descriptionParser';
 
 type Props = NativeStackScreenProps<
   CollectionStackParamList,
@@ -73,16 +74,35 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
   }, []);
 
   const renderDescription = (text: string) => {
-    const cleaned = text.replace(/<[^>]*>/g, '').trim();
-    if (!cleaned) return null;
+    const { paragraph, bullets } = parseDescription(text);
+    if (!paragraph && bullets.length === 0) return null;
 
-    return cleaned
-      .split(/\n\s*\n+/)
-      .map((para, index) => (
-        <Text key={index} style={styles.descriptionParagraph} selectable>
-          {para.trim()}
+    const out: React.ReactNode[] = [];
+    let keyIndex = 0;
+
+    if (paragraph) {
+      out.push(
+        <Text key={keyIndex++} style={styles.descriptionParagraph} selectable>
+          {paragraph}
         </Text>
-      ));
+      );
+    }
+
+    if (bullets.length > 0) {
+      out.push(<View key={keyIndex++} style={styles.descriptionSectionSpacer} />);
+      bullets.forEach((item) => {
+        out.push(
+          <View key={keyIndex++} style={styles.bulletItem}>
+            <Text style={styles.bulletDot}>•</Text>
+            <Text style={styles.bulletText} selectable>
+              {item}
+            </Text>
+          </View>
+        );
+      });
+    }
+
+    return out;
   };
 
   const getGradientColors = () => {
