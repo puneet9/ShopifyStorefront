@@ -1,11 +1,15 @@
 import axios from 'axios';
 import { Product, ProductVariant } from '../types';
-
-const API_URL = 'https://gist.githubusercontent.com/agorovyi/40dcd166a38b4d1e9156ad66c87111b7/raw/36f1c815dd83ed8189e55e6e6619b5d7c7c4e7d6/testProducts.json';
+import { config } from '../config/env';
+import { withNetworkCheck } from '../utils/network';
 
 const transformProduct = (shopifyProduct: any): Product => {
+  if (!shopifyProduct) {
+    throw new Error('Product data is null or undefined');
+  }
+
   const mainImage = shopifyProduct.images?.[0];
-  const imageUrl = mainImage?.url || 'https://via.placeholder.com/500?text=No+Image';
+  const imageUrl = mainImage?.url ?? '';
 
   const variants: ProductVariant[] = (shopifyProduct.variants || []).map((variant: any) => {
     const variantImage = shopifyProduct.images?.find((img: any) => img.id === variant.image?.id);
@@ -55,33 +59,52 @@ const transformProduct = (shopifyProduct: any): Product => {
   };
 };
 
+const CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedProducts: Product[] | null = null;
+let lastFetchedAt = 0;
+
 export const productService = {
-  async fetchProducts(): Promise<Product[]> {
+  async fetchProducts(options: { forceRefresh?: boolean } = {}): Promise<Product[]> {
+    const { forceRefresh = false } = options;
+    const now = Date.now();
+
+    if (!forceRefresh && cachedProducts && now - lastFetchedAt < CACHE_TTL_MS) {
+      return cachedProducts;
+    }
+
     try {
-      const response = await axios.get(API_URL);
-      const products = Array.isArray(response.data) ? response.data : response.data.products || [];
+      const response = await withNetworkCheck(
+        () => axios.get(config.api.baseUrl, { timeout: 10000 }),
+        { timeout: 10000, retryCount: 1 }
+      );
+
+      const products = Array.isArray(response.data) 
+        ? response.data 
+        : response.data.products || [];
 
       if (!products || products.length === 0) {
-        console.warn('No products in API response');
         return [];
       }
 
-      const transformedProducts = products.map((p: any) => {
-        const transformed = transformProduct(p);
-        console.log('Transformed product:', {
-          id: transformed.id,
-          title: transformed.title,
-          variantsCount: transformed.variants.length,
-          firstVariant: transformed.variants[0],
-        });
-        return transformed;
-      }).filter((p: Product) => p.id);
-      
-      console.log('Total transformed products:', transformedProducts.length);
-      return transformedProducts;
+      const transformed = products
+        .map((p: any) => {
+          try {
+            return transformProduct(p);
+          } catch {
+            return null;
+          }
+        })
+        .filter((p: Product | null): p is Product => p !== null);
+
+      cachedProducts = transformed;
+      lastFetchedAt = now;
+
+      return transformed;
     } catch (error) {
-      console.error('API fetch error:', error);
-      return [];
+      if (cachedProducts) {
+        return cachedProducts;
+      }
+      throw error;
     }
   },
 };

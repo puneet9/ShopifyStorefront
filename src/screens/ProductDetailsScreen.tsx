@@ -1,20 +1,21 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   ScrollView,
   Image,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Dimensions,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCart } from '../context/CartContext';
-import { Product, ProductVariant } from '../types';
+import { ProductVariant, getFirstAvailableVariant } from '../types';
 import { CollectionStackParamList } from '../types';
+import { getStyles } from '../styles/ProductDetailsScreen.styles';
+import { colors } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 
 type Props = NativeStackScreenProps<
   CollectionStackParamList,
@@ -24,119 +25,141 @@ type Props = NativeStackScreenProps<
 const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
   const { product } = route.params;
   const { addItem } = useCart();
+  const { showToast, showError } = useToast();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedSuccessfully, setAddedSuccessfully] = useState(false);
-  
-  // Ensure we have at least one variant
-  const defaultVariant = product.variants && product.variants.length > 0 
-    ? product.variants[0] 
-    : {
-        id: 'default',
-        title: 'Default',
-        price: '0.00',
-        available: true,
-        image: product.image,
-      };
-  
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(
-    defaultVariant
+  const [variantsExpanded, setVariantsExpanded] = useState(true);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
+    () => getFirstAvailableVariant(product) ?? product.variants[0] ?? null
   );
-  const [expandedVariants, setExpandedVariants] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const styles = getStyles(colors);
+
+  useEffect(() => {
+    const firstAvailable = getFirstAvailableVariant(product);
+    setSelectedVariant(firstAvailable ?? product.variants[0] ?? null);
+  }, [product]);
 
   const handleAddToCart = useCallback(() => {
-    if (isAddingToCart) return;
-    
+    if (isAddingToCart || !selectedVariant) return;
+
     try {
       setIsAddingToCart(true);
-      console.log('Adding to cart:', {
-        productId: product.id,
-        productTitle: product.title,
-        variant: selectedVariant,
-      });
       addItem(product.id, product.title, selectedVariant);
-      
-      // Show success feedback
       setAddedSuccessfully(true);
-      
-      // Alert user with option to go to cart
-      Alert.alert(
-        'Success!',
-        'Item added to cart. View your cart?',
-        [
-          {
-            text: 'Continue Shopping',
-            onPress: () => {
-              setAddedSuccessfully(false);
-              setIsAddingToCart(false);
-            },
-            style: 'default',
-          },
-          {
-            text: 'Go to Cart',
-            onPress: () => {
-              setAddedSuccessfully(false);
-              setIsAddingToCart(false);
-              // Navigate to cart screen (parent tab navigator)
-              navigation.getParent()?.navigate('Cart' as any);
-            },
-            style: 'default',
-          },
-        ],
-        { cancelable: false }
-      );
+
+      showToast({
+        message: 'Added to cart',
+        type: 'success',
+        action: {
+          label: 'Go to Cart',
+          onPress: () => navigation.getParent()?.navigate('Cart' as any),
+        },
+      });
     } catch (error) {
       console.error('Error adding to cart:', error);
-      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
+      showError(error as Error);
+    } finally {
       setIsAddingToCart(false);
+      setAddedSuccessfully(false);
     }
-  }, [addItem, product.id, product.title, selectedVariant, isAddingToCart, navigation]);
+  }, [isAddingToCart, selectedVariant, addItem, product.id, product.title, navigation, showToast, showError]);
 
-  const toggleVariants = useCallback(() => {
-    setExpandedVariants(!expandedVariants);
-  }, [expandedVariants]);
+  const handleVariantSelect = useCallback((variant: ProductVariant) => {
+    if (!variant.available) return;
+    setSelectedVariant(variant);
+  }, []);
 
-  const renderVariantItem = ({ item }: { item: ProductVariant }) => {
-    const isSelected = item.id === selectedVariant.id;
-    const isUnavailable = !item.available;
+  const renderDescription = (text: string) => {
+    const cleaned = text.replace(/<[^>]*>/g, '').trim();
+    if (!cleaned) return null;
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.variantItem,
-          isSelected && styles.variantItemSelected,
-        ]}
-        onPress={() => !isUnavailable && setSelectedVariant(item)}
-        disabled={isUnavailable}
-        accessibilityRole="radio"
-        accessibilityState={{ selected: isSelected, disabled: isUnavailable }}
-        accessibilityLabel={`${item.title}${isUnavailable ? ', unavailable' : ''}, $${item.price}`}
-      >
-        <Text
-          style={[
-            styles.variantTitle,
-            isSelected && styles.variantTitleSelected,
-            isUnavailable && styles.variantTitleUnavailable,
-          ]}
-        >
-          {item.title}
+    return cleaned
+      .split(/\n\s*\n+/)
+      .map((para, index) => (
+        <Text key={index} style={styles.descriptionParagraph} selectable>
+          {para.trim()}
         </Text>
-        {isUnavailable && (
-          <Text style={styles.unavailableBadge}>Unavailable</Text>
-        )}
-      </TouchableOpacity>
-    );
+      ));
   };
 
+  const getGradientColors = () => {
+    if (addedSuccessfully) return [colors.success, '#2B8F65'];
+    if (isAddingToCart) return ['#5E6C84', '#42526E'];
+    if (!selectedVariant || !selectedVariant.available) return ['#DFE1E6', '#C1C7D0'];
+    return [colors.primary, '#5B7A6C'];
+  };
+
+  const priceNumber = Number.parseFloat(
+    selectedVariant?.price ?? getFirstAvailableVariant(product)?.price ?? '0'
+  );
+  const displayPrice = Number.isFinite(priceNumber) ? priceNumber.toFixed(2) : '0.00';
+
+  const imageUriRaw = selectedVariant?.image?.url || product.image?.url || '';
+  const imageUri = typeof imageUriRaw === 'string' ? imageUriRaw.trim() : '';
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    if (!imageUri) {
+      setImageError(true);
+      setIsImageLoading(false);
+      return;
+    }
+
+    setImageError(false);
+    setIsImageLoading(true);
+
+    timeoutId = setTimeout(() => {
+      setIsImageLoading(false);
+    }, 8000);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [imageUri]);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView style={styles.scrollView}>
         {/* Product Image */}
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: selectedVariant.image?.url || product.image.url }}
-            style={styles.image}
-            accessibilityIgnoresInvertColors
-          />
+          {imageUri ? (
+            <>
+              <Image
+                key={imageUri}
+                source={{ uri: imageUri }}
+                style={styles.image}
+                accessibilityIgnoresInvertColors
+                onLoadStart={() => setIsImageLoading(true)}
+                onLoadEnd={() => setIsImageLoading(false)}
+                onError={() => {
+                  setIsImageLoading(false);
+                  setImageError(true);
+                }}
+              />
+              {imageError && (
+                <View style={styles.imageFallback}>
+                  <Text style={styles.imageFallbackText}>
+                    Image unavailable
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.imageFallback}>
+              <Text style={styles.imageFallbackText}>
+                Image unavailable
+              </Text>
+            </View>
+          )}
+          {isImageLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          )}
         </View>
 
         {/* Product Info */}
@@ -147,9 +170,57 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
             {product.title}
           </Text>
 
-          <Text style={styles.price}>
-            ${selectedVariant.price}
-          </Text>
+          <Text style={styles.price}>${displayPrice}</Text>
+
+          {/* Expandable Variant Selection */}
+          {product.variants.length > 0 && (
+            <View style={styles.variantsContainer}>
+              <TouchableOpacity
+                style={styles.variantsHeader}
+                onPress={() => setVariantsExpanded((prev) => !prev)}
+                accessibilityRole="button"
+                accessibilityLabel={variantsExpanded ? 'Collapse variants' : 'Expand variants'}
+                accessibilityState={{ expanded: variantsExpanded }}
+              >
+                <Text style={styles.variantsLabel}>Select a Variant</Text>
+                <Text style={[styles.expandIcon, variantsExpanded && styles.expandIconRotated]}>▼</Text>
+              </TouchableOpacity>
+              {variantsExpanded && (
+                <View style={styles.optionsRow}>
+                  {product.variants.map((variant) => {
+                    const isSelected = selectedVariant?.id === variant.id;
+                    const isAvailable = variant.available;
+                    const title = variant.title === 'Default Title' ? 'Default' : variant.title;
+
+                    return (
+                      <TouchableOpacity
+                        key={variant.id}
+                        style={[
+                          styles.variantItem,
+                          isSelected && styles.variantItemSelected,
+                        ]}
+                        onPress={() => handleVariantSelect(variant)}
+                        disabled={!isAvailable}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected, disabled: !isAvailable }}
+                        accessibilityLabel={`${title}${isAvailable ? '' : ', Out of Stock'}`}
+                      >
+                        <Text
+                          style={[
+                            styles.variantTitle,
+                            isSelected && styles.variantTitleSelected,
+                            !isAvailable && styles.variantTitleUnavailable,
+                          ]}
+                        >
+                          {title}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Description */}
           {product.description && (
@@ -157,54 +228,7 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
               <Text style={styles.descriptionLabel}>
                 Description
               </Text>
-              <Text
-                style={styles.description}
-                selectable
-                accessibilityLiveRegion="polite"
-              >
-                {product.description}
-              </Text>
-            </View>
-          )}
-
-          {/* Variant Selection */}
-          {product.variants.length > 1 && (
-            <View style={styles.variantsContainer}>
-              <TouchableOpacity
-                style={styles.variantsHeader}
-                onPress={toggleVariants}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: expandedVariants }}
-                accessibilityLabel={`Variant options, ${expandedVariants ? 'expanded' : 'collapsed'}`}
-              >
-                <Text style={styles.variantsLabel}>
-                  Select Variant
-                </Text>
-                <Text
-                  style={[
-                    styles.expandIcon,
-                    expandedVariants && styles.expandIconRotated,
-                  ]}
-                >
-                  ▼
-                </Text>
-              </TouchableOpacity>
-
-              {expandedVariants && (
-                <View
-                  style={styles.variantsList}
-                  accessibilityRole="list"
-                  accessibilityLabel="Available variants"
-                >
-                  <FlatList
-                    data={product.variants}
-                    renderItem={renderVariantItem}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                    nestedScrollEnabled={false}
-                  />
-                </View>
-              )}
+              <View>{renderDescription(product.description)}</View>
             </View>
           )}
         </View>
@@ -215,169 +239,36 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
         <TouchableOpacity
           style={[
             styles.addToCartButton,
-            !selectedVariant.available && styles.addToCartButtonDisabled,
             isAddingToCart && styles.addToCartButtonLoading,
-            addedSuccessfully && styles.addToCartButtonSuccess,
           ]}
           onPress={handleAddToCart}
-          disabled={!selectedVariant.available || isAddingToCart}
+          disabled={!selectedVariant || !selectedVariant.available || isAddingToCart}
           accessibilityRole="button"
           accessibilityLabel={`Add ${product.title} to cart`}
           accessibilityHint="Double tap to add this product to your shopping cart"
         >
-          <Text style={styles.addToCartText}>
-            {addedSuccessfully
-              ? '✓ Added to Cart!'
-              : isAddingToCart
-              ? 'Adding...'
-              : selectedVariant.available
-              ? 'Add to Cart'
-              : 'Out of Stock'}
-          </Text>
+          <LinearGradient
+            colors={getGradientColors()}
+            style={styles.addToCartGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Text style={styles.addToCartText}>
+              {addedSuccessfully
+                ? 'Added to cart'
+                : isAddingToCart
+                ? 'Adding...'
+                : !selectedVariant
+                ? 'Select a Variant'
+                : selectedVariant.available
+                ? 'Add to Cart'
+                : 'Out of Stock'}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  imageContainer: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#f0f0f0',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
-    color: '#000',
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#000',
-  },
-  descriptionContainer: {
-    marginBottom: 24,
-  },
-  descriptionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#000',
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#666',
-  },
-  variantsContainer: {
-    marginBottom: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 16,
-  },
-  variantsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  variantsLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  expandIcon: {
-    fontSize: 12,
-    color: '#666',
-  },
-  expandIconRotated: {
-    transform: [{ rotate: '180deg' }],
-  },
-  variantsList: {
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 12,
-  },
-  variantItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginBottom: 8,
-  },
-  variantItemSelected: {
-    borderColor: '#000',
-    backgroundColor: '#f5f5f5',
-  },
-  variantTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
-    flex: 1,
-  },
-  variantTitleSelected: {
-    fontWeight: '700',
-  },
-  variantTitleUnavailable: {
-    color: '#999',
-    textDecorationLine: 'line-through',
-  },
-  unavailableBadge: {
-    fontSize: 12,
-    color: '#999',
-    fontWeight: '600',
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  addToCartButton: {
-    backgroundColor: '#000',
-    paddingVertical: 16,
-    borderRadius: 4,
-    alignItems: 'center',
-  },
-  addToCartButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  addToCartButtonLoading: {
-    backgroundColor: '#666',
-    opacity: 0.8,
-  },
-  addToCartButtonSuccess: {
-    backgroundColor: '#4CAF50',
-  },
-  addToCartText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 
 export default ProductDetailsScreen;

@@ -1,5 +1,7 @@
-import React, { createContext, useState, useCallback, useContext } from 'react';
+import React, { createContext, useState, useCallback, useContext, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CartItem, ProductVariant } from '../types';
+import { StorageError } from '../types/errors';
 
 interface CartContextType {
   items: CartItem[];
@@ -18,45 +20,82 @@ interface CartContextType {
   clearCart: () => void;
 }
 
+const CART_STORAGE_KEY = '@shopify_storefront_cart';
+
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const storedCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
+        if (storedCart) {
+          try {
+            const parsedCart = JSON.parse(storedCart);
+            if (Array.isArray(parsedCart)) {
+              setItems(parsedCart);
+            } else {
+              throw new Error('Invalid cart data format');
+            }
+          } catch (parseError) {
+            throw new StorageError('Failed to parse cart data', 'load', parseError);
+          }
+        }
+      } catch {
+        return;
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadCart();
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      const saveCart = async () => {
+        try {
+          await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+        } catch {
+          return;
+        }
+      };
+      
+      saveCart();
+    }
+  }, [items, isLoaded]);
 
   const addItem = useCallback(
     (productId: string, productTitle: string, variant: ProductVariant) => {
-      console.log('CartContext.addItem called with:', { productId, productTitle, variantId: variant.id });
       setItems((prevItems) => {
         const existingItem = prevItems.find(
           (item) => item.productId === productId && item.variantId === variant.id
         );
 
-        let newItems;
         if (existingItem) {
-          newItems = prevItems.map((item) =>
+          return prevItems.map((item) =>
             item.productId === productId && item.variantId === variant.id
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
-        } else {
-          newItems = [
-            ...prevItems,
-            {
-              productId,
-              variantId: variant.id,
-              productTitle,
-              variantTitle: variant.title,
-              price: variant.price,
-              image: variant.image || { url: '' },
-              quantity: 1,
-            },
-          ];
         }
-        
-        console.log('Cart updated:', newItems.length, 'items');
-        return newItems;
+
+        return [
+          ...prevItems,
+          {
+            productId,
+            variantId: variant.id,
+            productTitle,
+            variantTitle: variant.title,
+            price: variant.price,
+            image: variant.image || { url: '' },
+            quantity: 1,
+          },
+        ];
       });
     },
     []

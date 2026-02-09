@@ -18,6 +18,12 @@ export interface Product {
   variants: ProductVariant[];
 }
 
+/** Returns the first available-for-sale variant, or the first variant if none available */
+export function getFirstAvailableVariant(product: Product): ProductVariant | undefined {
+  const available = product.variants.find((v) => v.available);
+  return available ?? product.variants[0];
+}
+
 export interface CartItem {
   productId: string;
   variantId: string;

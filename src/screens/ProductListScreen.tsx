@@ -1,20 +1,21 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   FlatList,
   Image,
   Text,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
+  RefreshControl,
   Dimensions,
-  AccessibilityInfo,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { productService } from '../services/api';
-import { Product } from '../types';
+import { Product, getFirstAvailableVariant } from '../types';
 import { CollectionStackParamList } from '../types';
+import { getStyles } from '../styles/ProductListScreen.styles';
+import { useTheme } from '../context/ThemeContext';
 
 type Props = NativeStackScreenProps<
   CollectionStackParamList,
@@ -24,21 +25,25 @@ type Props = NativeStackScreenProps<
 const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const windowWidth = Dimensions.get('window').width;
-  const itemWidth = windowWidth / 2 - 8;
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const { width: screenWidth } = Dimensions.get('window');
+  const cardGap = 12;
+  const horizontalPadding = 16;
+  const itemWidth = (screenWidth - horizontalPadding * 2 - cardGap) / 2;
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (
+    options: { forceRefresh?: boolean; showLoading?: boolean } = {}
+  ) => {
+    const { forceRefresh = false, showLoading = true } = options;
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
-      const data = await productService.fetchProducts();
-      console.log('Products loaded:', data.length, 'products');
+      const data = await productService.fetchProducts({ forceRefresh });
       if (data.length === 0) {
         setError('No products available');
       }
@@ -48,9 +53,19 @@ const ProductListScreen: React.FC<Props> = ({ navigation }) => {
       setError(`Failed to load products: ${errorMsg}`);
       console.error('Product fetch error:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProducts({ forceRefresh: true, showLoading: false });
+    setRefreshing(false);
+  }, [fetchProducts]);
 
   const handleProductPress = useCallback(
     (product: Product) => {
@@ -62,55 +77,93 @@ const ProductListScreen: React.FC<Props> = ({ navigation }) => {
     [navigation]
   );
 
-  const renderProductItem = ({ item }: { item: Product }) => {
-    const defaultVariant = item.variants[0];
-    const price = defaultVariant?.price || 'N/A';
-
-    return (
-      <TouchableOpacity
-        style={[styles.productItem, { width: itemWidth }]}
-        onPress={() => handleProductPress(item)}
-        accessibilityRole="button"
-        accessibilityLabel={`${item.title}, ${price}`}
-        accessibilityHint="Double tap to view product details"
-      >
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: item.image.url }}
-            style={styles.image}
-            accessibilityIgnoresInvertColors
-          />
+  const renderListHeader = useCallback(
+    () => (
+      <>
+        <View style={[styles.heroWrapper, styles.heroWrapperNegativeMargin]}>
+          <View style={styles.heroContainer}>
+            <Image
+              source={{
+                uri:
+                  products[0]?.image?.url ||
+                  'https://cdn.shopify.com/s/files/1/0654/2458/8973/files/107112-hoodie-mockup_1180x400.png.jpg?v=1719328890',
+              }}
+              style={styles.heroImage}
+              resizeMode="cover"
+              accessibilityIgnoresInvertColors
+            />
+          </View>
         </View>
-        <Text
-          style={styles.title}
-          numberOfLines={2}
-          accessibilityLiveRegion="polite"
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Shop Collection
+          </Text>
+          <Text style={styles.sectionDescription}>
+            Uniting comfort and style with premium materials.
+          </Text>
+        </View>
+      </>
+    ),
+    [products, styles]
+  );
+
+  const renderProductItem = useCallback(
+    ({ item }: { item: Product }) => {
+      const defaultVariant = getFirstAvailableVariant(item);
+      const price = defaultVariant?.price || '0';
+      const priceNumber = Number.parseFloat(price);
+      const displayPrice = Number.isFinite(priceNumber) ? priceNumber.toFixed(2) : '0.00';
+
+      return (
+        <TouchableOpacity
+          style={[styles.productItem, { width: itemWidth }]}
+          onPress={() => handleProductPress(item)}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.title}, $${displayPrice}`}
+          accessibilityHint="Double tap to view product details"
         >
-          {item.title}
-        </Text>
-        <Text style={styles.price}>
-          ${price}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: item.image.url }}
+              style={styles.image}
+              accessibilityIgnoresInvertColors
+            />
+          </View>
+          <View style={styles.productInfo}>
+            <Text
+              style={styles.title}
+              numberOfLines={2}
+              accessibilityLiveRegion="polite"
+            >
+              {item.title}
+            </Text>
+            <Text style={styles.price}>${displayPrice}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [styles, itemWidth, handleProductPress]
+  );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#000" />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={[styles.container, styles.loadingContainer]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={fetchProducts}
+            onPress={() => fetchProducts()}
             accessibilityRole="button"
             accessibilityLabel="Retry loading products"
           >
@@ -122,91 +175,33 @@ const ProductListScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
         data={products}
         renderItem={renderProductItem}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.contentContainer}
+        ListHeaderComponent={renderListHeader}
+        contentContainerStyle={styles.scrollContent}
+        initialNumToRender={6}
+        windowSize={7}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews
         accessibilityRole="list"
         accessibilityLabel="Product list"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       />
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  contentContainer: {
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-  columnWrapper: {
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingHorizontal: 4,
-    marginBottom: 8,
-  },
-  productItem: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  imageContainer: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#f0f0f0',
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '500',
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    color: '#000',
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: '600',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    color: '#000',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#000',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 4,
-  },
-  retryText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
 
 export default ProductListScreen;

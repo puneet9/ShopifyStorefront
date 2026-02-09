@@ -1,20 +1,29 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   FlatList,
   Image,
   Text,
   TouchableOpacity,
-  StyleSheet,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { CartItem } from '../types';
+import { getStyles } from '../styles/CartScreen.styles';
+import { colors } from '../context/ThemeContext';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { useToast } from '../context/ToastContext';
 
 const CartScreen: React.FC = () => {
   const { items, removeItem, updateQuantity, getTotalPrice, clearCart } =
     useCart();
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(colors);
+  const { showToast } = useToast();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleQuantityChange = useCallback(
     (item: CartItem, newQuantity: string) => {
@@ -48,6 +57,24 @@ const CartScreen: React.FC = () => {
     },
     [removeItem]
   );
+
+  const handleClearCart = useCallback(() => setShowClearConfirm(true), []);
+  const handleClearConfirm = useCallback(() => {
+    clearCart();
+    setShowClearConfirm(false);
+    showToast({
+      message: 'Cart cleared',
+      type: 'success',
+    });
+  }, [clearCart, showToast]);
+
+  const handleCheckout = useCallback(() => {
+    clearCart();
+    showToast({
+      message: 'Thank you for your purchase!',
+      type: 'success',
+    });
+  }, [clearCart, showToast]);
 
   const renderCartItem = ({ item }: { item: CartItem }) => (
     <View
@@ -98,6 +125,7 @@ const CartScreen: React.FC = () => {
             keyboardType="number-pad"
             maxLength={3}
             accessibilityLabel="Quantity"
+            placeholderTextColor={colors.textSecondary}
             accessibilityRole="adjustable"
           />
           <TouchableOpacity
@@ -132,198 +160,64 @@ const CartScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={items}
-        renderItem={renderCartItem}
-        keyExtractor={(item) => `${item.productId}-${item.variantId}`}
-        ListEmptyComponent={renderEmptyCart}
-        contentContainerStyle={styles.listContent}
-        accessibilityRole="list"
-        accessibilityLabel="Shopping cart items"
-      />
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
+        <FlatList
+          data={items}
+          renderItem={renderCartItem}
+          keyExtractor={(item) => `${item.productId}-${item.variantId}`}
+          ListEmptyComponent={renderEmptyCart}
+          contentContainerStyle={styles.listContent}
+          accessibilityRole="list"
+          accessibilityLabel="Shopping cart items"
+        />
 
-      {/* Footer with Total */}
-      {items.length > 0 && (
-        <View style={styles.footer}>
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={styles.totalPrice}>${getTotalPrice()}</Text>
+        {/* Footer with Total */}
+        {items.length > 0 && (
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalLabel}>Total:</Text>
+              <Text style={styles.totalPrice}>${getTotalPrice()}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.checkoutButton}
+              onPress={handleCheckout}
+              accessibilityRole="button"
+              accessibilityLabel="Checkout"
+              accessibilityHint="Proceed to checkout"
+            >
+              <Text style={styles.checkoutText}>Checkout</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={handleClearCart}
+              accessibilityRole="button"
+              accessibilityLabel="Clear cart"
+            >
+              <Text style={styles.clearText}>Clear Cart</Text>
+            </TouchableOpacity>
           </View>
+        )}
+      </KeyboardAvoidingView>
 
-          <TouchableOpacity
-            style={styles.checkoutButton}
-            accessibilityRole="button"
-            accessibilityLabel="Checkout"
-            accessibilityHint="Proceed to checkout"
-          >
-            <Text style={styles.checkoutText}>Checkout</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={clearCart}
-            accessibilityRole="button"
-            accessibilityLabel="Clear cart"
-          >
-            <Text style={styles.clearText}>Clear Cart</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <ConfirmModal
+        visible={showClearConfirm}
+        title="Clear Cart"
+        message="Are you sure you want to remove all items from your cart?"
+        confirmLabel="Clear Cart"
+        cancelLabel="Cancel"
+        onConfirm={handleClearConfirm}
+        onCancel={() => setShowClearConfirm(false)}
+        confirmDanger
+      />
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    flexGrow: 1,
-  },
-  cartItem: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  imageContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  detailsContainer: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  variantName: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  price: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  actionsContainer: {
-    justifyContent: 'space-between',
-  },
-  quantityControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  quantityButton: {
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantityButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  quantityInput: {
-    flex: 1,
-    textAlign: 'center',
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: '#e0e0e0',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  removeButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
-  },
-  removeButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#000',
-    textAlign: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-  },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  totalPrice: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
-  },
-  checkoutButton: {
-    backgroundColor: '#000',
-    paddingVertical: 16,
-    borderRadius: 4,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  checkoutText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  clearButton: {
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 12,
-    borderRadius: 4,
-    alignItems: 'center',
-  },
-  clearText: {
-    color: '#000',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
 
 export default CartScreen;
